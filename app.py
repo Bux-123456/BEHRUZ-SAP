@@ -20,7 +20,22 @@ st.markdown("""
 [data-testid="stSidebar"],[data-testid="stSidebar"] > div { background:linear-gradient(180deg,#061629,#0D2C4D) !important; border-right:1px solid var(--line); }
 .stApp h1,.stApp h2,.stApp h3,.stApp h4,.stApp p,.stApp label,.stApp li,.stApp [data-testid="stMetricLabel"],.stApp [data-testid="stMetricValue"],.stApp [data-testid="stCaptionContainer"] { color:var(--text) !important; }
 .stApp h1 { font-weight:850 !important; letter-spacing:-1px; }
-[data-testid="stMetric"],[data-testid="stChatMessage"],[data-testid="stExpander"] { background:linear-gradient(145deg,rgba(22,56,95,.96),rgba(10,35,62,.96)) !important; border:1px solid var(--line) !important; border-radius:16px !important; padding:12px; }
+[data-testid="stMetric"],[data-testid="stExpander"] { background:linear-gradient(145deg,rgba(22,56,95,.96),rgba(10,35,62,.96)) !important; border:1px solid var(--line) !important; border-radius:16px !important; padding:12px; }
+/* Chat xabarlari: yumaloq, o‘qilishi oson kartochkalar */
+[data-testid="stChatMessage"] { background:linear-gradient(145deg,rgba(19,52,88,.96),rgba(10,31,55,.96)) !important; border:1px solid #2B5682 !important; border-radius:18px !important; padding:16px 18px !important; margin:12px 0 !important; box-shadow:0 8px 22px rgba(0,0,0,.12); }
+[data-testid="stChatMessage"] p { line-height:1.7 !important; }
+[data-testid="stChatMessage"] code { color:#D9FFE9 !important; background:#09213A !important; border-radius:5px; padding:2px 5px; }
+[data-testid="stChatMessage"] a { color:#83F0BA !important; }
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] ul,
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] ol { padding-left:1.4rem; }
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] table { width:100%; }
+/* Chat yozish maydoni */
+[data-testid="stChatInput"] { background:rgba(16,43,76,.98) !important; border:1px solid #3B6793 !important; border-radius:17px !important; padding:6px !important; box-shadow:0 8px 24px rgba(0,0,0,.15); }
+[data-testid="stChatInput"] textarea { background:#F4F8FC !important; color:#10233D !important; border-radius:12px !important; min-height:54px !important; }
+[data-testid="stChatInput"] button { background:linear-gradient(135deg,#16A36A,#0D8658) !important; border-radius:11px !important; }
+/* Tezkor savollar uchun qulay tugmalar */
+.stButton > button { white-space:normal !important; line-height:1.35 !important; }
+.stSpinner > div { border-top-color:#72E5B0 !important; }
 [data-testid="stMetricValue"] { font-weight:800 !important; }
 .stButton > button,[data-testid="stFormSubmitButton"] > button { background:linear-gradient(135deg,#16A36A,#0D8658) !important; color:#fff !important; border:1px solid #28BD81 !important; border-radius:11px !important; font-weight:700 !important; min-height:42px; transition:all .18s ease; }
 .stButton > button:hover,[data-testid="stFormSubmitButton"] > button:hover { background:#128455 !important; border-color:#75F0B5 !important; transform:translateY(-1px); }
@@ -162,7 +177,13 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if not st.session_state.messages:
-    st.info("Assalomu alaykum! Savolingizni yozing yoki yuqoridagi bo‘limlardan birini tanlang. Maxfiy ma’lumotlarni yubormang.")
+    st.markdown("""
+    <div style="padding:18px 20px;border:1px solid #2B5682;border-radius:18px;background:linear-gradient(120deg,rgba(20,61,102,.92),rgba(8,31,55,.96));margin:8px 0 14px;">
+      <div style="font-size:20px;font-weight:800;color:#FFFFFF;margin-bottom:6px;">Assalomu alaykum! 👋</div>
+      <div style="color:#D5E4F4;line-height:1.65;">Men SOLIQ PRO AI yordamchisiman. Quyidagi tezkor savollardan birini tanlang yoki o‘z savolingizni yozing.</div>
+      <div style="color:#8AF0BE;font-size:12px;margin-top:10px;">Maslahat: soliq davri va operatsiya tafsilotlarini yozsangiz, javob aniqroq bo‘ladi. Maxfiy ma’lumotlarni yubormang.</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
