@@ -4,6 +4,76 @@ import streamlit as st
 
 st.set_page_config(page_title="SOLIQ PRO AI", page_icon="🧾", layout="wide")
 
+
+# SOLIQ PRO AI dizayni: to‘q ko‘k fon, oq matn va yashil tugmalar
+st.markdown("""
+<style>
+/* Asosiy ilova va kontent foni */
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stHeader"] {
+    background-color: #142B4A !important;
+    color: #FFFFFF !important;
+}
+
+/* Yon menyu */
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] > div {
+    background-color: #10233D !important;
+}
+
+/* Matnlar */
+.stApp h1, .stApp h2, .stApp h3,
+.stApp p, .stApp label, .stApp [data-testid="stMetricLabel"],
+.stApp [data-testid="stMetricValue"], .stApp [data-testid="stCaptionContainer"] {
+    color: #FFFFFF !important;
+}
+
+/* Chat xabarlari va kartochkalar */
+[data-testid="stChatMessage"],
+[data-testid="stMetric"],
+[data-testid="stExpander"] {
+    background-color: #1C385B !important;
+    border: 1px solid #355477 !important;
+    border-radius: 12px !important;
+}
+
+/* Asosiy tugmalar */
+.stButton > button,
+[data-testid="stFormSubmitButton"] > button {
+    background-color: #16A36A !important;
+    color: #FFFFFF !important;
+    border: 1px solid #16A36A !important;
+    border-radius: 9px !important;
+    font-weight: 600 !important;
+}
+.stButton > button:hover,
+[data-testid="stFormSubmitButton"] > button:hover {
+    background-color: #128455 !important;
+    border-color: #128455 !important;
+}
+
+/* Matn kiritish maydonlari */
+.stTextInput input, .stTextArea textarea,
+[data-testid="stChatInput"] textarea {
+    background-color: #FFFFFF !important;
+    color: #142B4A !important;
+    border-radius: 8px !important;
+}
+
+/* Selectbox */
+[data-testid="stSelectbox"] div[data-baseweb="select"] {
+    background-color: #FFFFFF !important;
+    color: #142B4A !important;
+    border-radius: 8px !important;
+}
+
+/* Havolalar */
+.stApp a { color: #70E0AD !important; }
+hr { border-color: #355477 !important; }
+</style>
+""", unsafe_allow_html=True)
+
 SYSTEM_PROMPT = """
 Siz SOLIQ PRO AI — O‘zbekiston bo‘yicha professional buxgalteriya, moliya, soliq tahlili
 va audit yordamchisisiz. Foydalanuvchiga o‘zbek tilida, aniq va tartibli javob bering.
