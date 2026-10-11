@@ -698,9 +698,19 @@ if prompt:
                 else:
                     answer = local_reply(prompt, mode)
                 st.markdown(answer)
-            except Exception:
-                answer = ("AI xizmatiga ulanishda muammo yuz berdi. Streamlit Cloud → Settings → Secrets bo‘limida `OPENAI_API_KEY` sozlamasini tekshiring. API kalitini chatga yoki GitHub kodiga yozmang.")
+            except Exception as exc:
+                # Foydalanuvchiga umumiy xabar bilan birga sababini ham ko‘rsatamiz.
+                # Maxfiy API kaliti xato matniga tushib qolsa, uni yashiramiz.
+                error_detail = f"{type(exc).__name__}: {exc}"
+                if OPENAI_API_KEY:
+                    error_detail = error_detail.replace(OPENAI_API_KEY, "[API kaliti yashirildi]")
+                answer = (
+                    "AI xizmatiga ulanishda muammo yuz berdi. Quyidagi xatolik tafsilotini "
+                    "tekshiring. API kalitini chatga yoki GitHub kodiga yubormang."
+                )
                 st.error(answer)
+                with st.expander("Xatolik tafsilotlari"):
+                    st.code(error_detail)
     st.session_state.messages.append({"role": "assistant", "content": answer})
 
 b1, b2 = st.columns([1, 4])
