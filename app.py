@@ -14,15 +14,40 @@ except Exception:
 
 st.markdown("""
 <style>
-:root { --navy:#07182D; --panel:#102B4C; --panel2:#16385F; --green:#16A36A; --mint:#72E5B0; --line:#294D75; --text:#F5F8FC; --muted:#B8CBE0; }
-.stApp,[data-testid="stAppViewContainer"] { background:radial-gradient(ellipse at 75% 0%,#123B67 0%,#071B33 43%,#051426 100%) !important; color:var(--text) !important; }
+:root {
+  --navy: #102A43;
+  --panel: #FFFFFF;
+  --panel2: #F3F6FB;
+  --green: #16845B;
+  --mint: #087F5B;
+  --line: #D7E1EC;
+  --text: #172B4D;
+  --muted: #526579;
+}
+
+.stApp,[data-testid="stAppViewContainer"] {
+  background: #F3F6FB !important;
+  color: var(--text) !important;
+}
 [data-testid="stHeader"] { background:rgba(5,20,38,.78) !important; }
 [data-testid="stSidebar"],[data-testid="stSidebar"] > div { background:linear-gradient(180deg,#061629,#0D2C4D) !important; border-right:1px solid var(--line); }
 .stApp h1,.stApp h2,.stApp h3,.stApp h4,.stApp p,.stApp label,.stApp li,.stApp [data-testid="stMetricLabel"],.stApp [data-testid="stMetricValue"],.stApp [data-testid="stCaptionContainer"] { color:var(--text) !important; }
 .stApp h1 { font-weight:850 !important; letter-spacing:-1px; }
 [data-testid="stMetric"],[data-testid="stExpander"] { background:linear-gradient(145deg,rgba(22,56,95,.96),rgba(10,35,62,.96)) !important; border:1px solid var(--line) !important; border-radius:16px !important; padding:12px; }
 /* Chat xabarlari: yumaloq, o‘qilishi oson kartochkalar */
-[data-testid="stChatMessage"] { background:linear-gradient(145deg,rgba(19,52,88,.96),rgba(10,31,55,.96)) !important; border:1px solid #2B5682 !important; border-radius:18px !important; padding:16px 18px !important; margin:12px 0 !important; box-shadow:0 8px 22px rgba(0,0,0,.12); }
+[data-testid="stChatMessage"] {
+  background: #FFFFFF !important;
+  color: #172B4D !important;
+  border: 1px solid #D7E1EC !important;
+  border-radius: 16px !important;
+  padding: 16px 18px !important;
+  margin: 12px 0 !important;
+  box-shadow: 0 4px 14px rgba(16,42,67,.06);
+}
+[data-testid="stChatMessage"] p,
+[data-testid="stChatMessage"] li {
+  color: #172B4D !important;
+}
 [data-testid="stChatMessage"] p { line-height:1.7 !important; }
 [data-testid="stChatMessage"] code { color:#D9FFE9 !important; background:#09213A !important; border-radius:5px; padding:2px 5px; }
 [data-testid="stChatMessage"] a { color:#83F0BA !important; }
