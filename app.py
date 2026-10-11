@@ -272,6 +272,21 @@ div[data-testid="stAlert"] { border-radius: 13px !important; }
   }
 }
 
+
+.resource-description {
+  display: block;
+  color: #91a9cc;
+  font-size: 11px;
+  font-weight: 450;
+  line-height: 1.35;
+  margin-top: 3px;
+}
+.resource-link { text-decoration: none !important; }
+.resource-link:focus-visible {
+  outline: 2px solid #00c8ff;
+  outline-offset: 2px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -360,17 +375,20 @@ with st.sidebar:
     st.markdown("""
     <div class="resource-list">
       <a class="resource-link" href="https://lex.uz/" target="_blank" rel="noopener noreferrer">
-        <span class="resource-icon">⚖</span><span>LexUZ — qonunchilik</span>
+        <span class="resource-icon">⚖</span>
+        <span><strong>LexUZ — qonunchilik</strong><small class="resource-description">Kodekslar, qonunlar va qarorlar</small></span>
       </a>
-      <a class="resource-link" href="https://soliq.uz/" target="_blank" rel="noopener noreferrer">
-        <span class="resource-icon">🏛</span><span>Soliq qo‘mitasi</span>
+      <a class="resource-link" href="https://my.soliq.uz/" target="_blank" rel="noopener noreferrer">
+        <span class="resource-icon">▣</span>
+        <span><strong>Elektron soliq xizmatlari</strong><small class="resource-description">Soliq to‘lovchilar uchun onlayn xizmatlar</small></span>
       </a>
       <a class="resource-link" href="https://ai.soliq.uz/" target="_blank" rel="noopener noreferrer">
-        <span class="resource-icon">✦</span><span>AI SOLIQ</span>
+        <span class="resource-icon">✦</span>
+        <span><strong>AI SOLIQ</strong><small class="resource-description">Soliq masalalari bo‘yicha AI xizmatlari</small></span>
       </a>
     </div>
     """, unsafe_allow_html=True)
-    st.info("Muhim: amaldagi qonunchilik va stavkalarni rasmiy manbadan tekshiring.")
+    st.info("Muhim: soliq stavkalari, muddatlar va qonuniy talablarni rasmiy manbadan tekshiring.")
     st.caption("Prototip soliq hisobotini avtomatik yubormaydi va soliq tizimlariga ulanmagan.")
 
 mode_map = {
