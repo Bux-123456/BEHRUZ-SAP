@@ -159,6 +159,49 @@ div[data-testid="stAlert"] { border-radius: 13px !important; }
   .hero-title { font-size: 31px; }
   .hero-sub { font-size: 15px; }
 }
+
+/* Yon paneldagi rasmiy manbalar ro'yxati */
+.resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+.resource-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  color: #dceaff !important;
+  text-decoration: none !important;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+  border: 1px solid #142f60;
+  border-radius: 10px;
+  background: linear-gradient(110deg, rgba(10,29,72,.96), rgba(5,16,48,.96));
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.resource-link:hover {
+  color: #00d2ff !important;
+  border-color: #00aaff;
+  background: linear-gradient(110deg, rgba(9,43,94,.98), rgba(5,20,57,.98));
+  transform: translateX(2px);
+}
+.resource-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: #00c8ff;
+  background: rgba(0,174,255,.10);
+  border: 1px solid rgba(0,174,255,.22);
+  font-size: 16px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -216,7 +259,19 @@ with st.sidebar:
     section = st.radio("Bo‘limni tanlang", ["Bosh sahifa", "Yangi maslahat", "QQS hisob-kitobi", "Foyda solig‘i", "Buxgalteriya provodkasi", "Soliq auditi", "Moliyaviy tahlil", "Hujjatni tahlil qilish"], label_visibility="collapsed")
     st.markdown("---")
     st.markdown("### 🌐 Rasmiy manbalar")
-    st.markdown("- [LexUZ — qonunchilik](https://lex.uz/)\n- [Soliq qo‘mitasi](https://soliq.uz/)\n- [AI SOLIQ](https://ai.soliq.uz/)")
+    st.markdown("""
+    <div class="resource-list">
+      <a class="resource-link" href="https://lex.uz/" target="_blank" rel="noopener noreferrer">
+        <span class="resource-icon">⚖</span><span>LexUZ — qonunchilik</span>
+      </a>
+      <a class="resource-link" href="https://soliq.uz/" target="_blank" rel="noopener noreferrer">
+        <span class="resource-icon">🏛</span><span>Soliq qo‘mitasi</span>
+      </a>
+      <a class="resource-link" href="https://ai.soliq.uz/" target="_blank" rel="noopener noreferrer">
+        <span class="resource-icon">✦</span><span>AI SOLIQ</span>
+      </a>
+    </div>
+    """, unsafe_allow_html=True)
     st.info("Muhim: amaldagi qonunchilik va stavkalarni rasmiy manbadan tekshiring.")
     st.caption("Prototip soliq hisobotini avtomatik yubormaydi va soliq tizimlariga ulanmagan.")
 
@@ -320,3 +375,4 @@ with b1:
         st.rerun()
 with b2:
     st.markdown('<div class="footer-note">SOLIQ PRO AI — prototip. Natijalarni rasmiy manbalar va birlamchi hujjatlar bilan tekshiring. Rasmiy soliq API integratsiyasi mavjud emas.</div>', unsafe_allow_html=True)
+    
