@@ -105,6 +105,32 @@ html, body, [class*="css"] { font-family: Inter, "Segoe UI", Arial, sans-serif; 
   border-radius: 10px !important; border-color: #1d477f !important;
 }
 [data-testid="stSelectbox"] * { color: #f4f8ff !important; }
+/* Oq/pale input kataklaridagi matnlar ko‘k va aniq ko‘rinsin */
+.stNumberInput input, [data-testid="stNumberInput"] input,
+[data-testid="stDateInput"] input, [data-testid="stTimeInput"] input {
+  color: #0645ad !important;
+  -webkit-text-fill-color: #0645ad !important;
+  font-weight: 600 !important;
+}
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+  color: #0645ad !important;
+  -webkit-text-fill-color: #0645ad !important;
+}
+[data-testid="stSelectbox"] div[data-baseweb="select"] input,
+[data-testid="stSelectbox"] div[data-baseweb="select"] span,
+[data-testid="stSelectbox"] div[data-baseweb="select"] div {
+  color: #0645ad !important;
+  -webkit-text-fill-color: #0645ad !important;
+}
+[data-baseweb="popover"] [role="option"],
+[data-baseweb="menu"] [role="option"] {
+  color: #0645ad !important;
+  background: #f4f8ff !important;
+}
+[data-baseweb="popover"] [role="option"] *,
+[data-baseweb="menu"] [role="option"] * {
+  color: #0645ad !important;
+}
 .stApp a { color: #00c8ff !important; font-weight: 600; }
 hr { border-color: #17366b !important; }
 div[data-testid="stAlert"] { border-radius: 13px !important; }
