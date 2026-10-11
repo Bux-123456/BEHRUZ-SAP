@@ -327,6 +327,8 @@ def local_reply(question: str, mode: str) -> str:
     return ("**SOLIQ PRO AI boshlang‘ich rejimda ishlayapti.** OpenAI API kaliti sozlanmagani uchun to‘liq AI javoblari hozircha mavjud emas.\n\nSavolingizga aniqroq javob berishim uchun soliq turi, davr, korxona maqomi va operatsiya ma’lumotlarini yozing. Amaldagi qonunchilikni [LexUZ](https://lex.uz/) va [Soliq qo‘mitasi](https://soliq.uz/) orqali tekshiring.")
 
 def ask_openai(messages, mode):
+    if not OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY sozlanmagan")
     from openai import OpenAI
     client = OpenAI(api_key=OPENAI_API_KEY)
     api_messages = [{"role": "system", "content": SYSTEM_PROMPT + "\n\nTanlangan ish bo‘limi: " + mode + "\n" + MODE_PROMPTS.get(mode, "")}]
@@ -435,6 +437,92 @@ if "active_mode" not in st.session_state:
 elif section != "Bosh sahifa" and mode != st.session_state["active_mode"]:
     st.session_state["active_mode"] = mode
 mode = st.session_state["active_mode"]
+
+
+# Amaliy ish qurollari: hisob-kitoblar va hujjat yuklash
+st.markdown('<div class="section-title">🛠️ Amaliy vositalar</div>', unsafe_allow_html=True)
+with st.expander("🧮 QQS kalkulyatori", expanded=(mode == "QQS hisob-kitobi")):
+    q1, q2, q3 = st.columns(3)
+    with q1:
+        qqs_summa = st.number_input("Operatsiya summasi (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="qqs_summa")
+    with q2:
+        qqs_stavka = st.number_input("QQS stavkasi (%) — tekshirilgan stavkani kiriting", min_value=0.0, max_value=100.0, value=12.0, step=1.0, key="qqs_stavka")
+    with q3:
+        qqs_turi = st.selectbox("Summa turi", ["QQSsiz summa", "QQS bilan summa"], key="qqs_turi")
+    if st.button("QQSni hisoblash", key="calc_qqs"):
+        if qqs_turi == "QQSsiz summa":
+            baza = qqs_summa
+            qqs = baza * qqs_stavka / 100
+            jami = baza + qqs
+        else:
+            jami = qqs_summa
+            baza = jami / (1 + qqs_stavka / 100) if qqs_stavka else jami
+            qqs = jami - baza
+        r1, r2, r3 = st.columns(3)
+        r1.metric("Soliq bazasi", f"{baza:,.2f} so‘m")
+        r2.metric("QQS summasi", f"{qqs:,.2f} so‘m")
+        r3.metric("Jami summa", f"{jami:,.2f} so‘m")
+        st.caption("Hisob-kitob siz kiritgan stavka asosida. Amaldagi stavka va imtiyozlarni rasmiy manbadan tekshiring.")
+
+with st.expander("📊 Foyda solig‘i kalkulyatori", expanded=(mode == "Foyda solig‘i")):
+    f1, f2, f3 = st.columns(3)
+    with f1: daromad = st.number_input("Jami daromad (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="foyda_daromad")
+    with f2: xarajat = st.number_input("Chegiriladigan xarajatlar (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="foyda_xarajat")
+    with f3: foyda_stavka = st.number_input("Stavka (%) — tekshirilgan stavkani kiriting", min_value=0.0, max_value=100.0, value=15.0, step=1.0, key="foyda_stavka")
+    tuzatish = st.number_input("Soliq bazasiga qo‘shiladigan tuzatishlar (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="foyda_tuzatish")
+    if st.button("Foyda solig‘ini hisoblash", key="calc_foyda"):
+        baza = max(0.0, daromad - xarajat + tuzatish)
+        soliq = baza * foyda_stavka / 100
+        r1, r2 = st.columns(2)
+        r1.metric("Hisobiy soliq bazasi", f"{baza:,.2f} so‘m")
+        r2.metric("Hisobiy soliq summasi", f"{soliq:,.2f} so‘m")
+        st.caption("Soddalashtirilgan hisob. Soliq tuzatishlari, imtiyozlar va soliq davriga tegishli qoidalar alohida tekshiriladi.")
+
+with st.expander("📈 Moliyaviy ko‘rsatkichlar tahlili", expanded=(mode == "Moliyaviy tahlil")):
+    m1, m2, m3 = st.columns(3)
+    with m1: tushum = st.number_input("Tushum (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="mol_tushum")
+    with m2: xarajat_mol = st.number_input("Xarajatlar (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="mol_xarajat")
+    with m3: aktiv = st.number_input("Jami aktivlar (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="mol_aktiv")
+    majburiyat = st.number_input("Jami majburiyatlar (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="mol_majburiyat")
+    if st.button("Moliyaviy tahlil qilish", key="calc_mol"):
+        foyda = tushum - xarajat_mol
+        rentabellik = (foyda / tushum * 100) if tushum else 0
+        qarz_ulushi = (majburiyat / aktiv * 100) if aktiv else 0
+        a, b, c = st.columns(3)
+        a.metric("Hisobiy foyda", f"{foyda:,.2f} so‘m")
+        b.metric("Foyda marjasi", f"{rentabellik:.2f}%")
+        c.metric("Majburiyatlar / aktivlar", f"{qarz_ulushi:.2f}%")
+        st.caption("Ko‘rsatkichlar kiritilgan ma’lumotlarga asoslangan; bu to‘liq moliyaviy audit emas.")
+
+with st.expander("📘 Buxgalteriya provodkasi uchun shablon", expanded=(mode == "Buxgalteriya provodkasi")):
+    with st.form("provodka_form"):
+        operatsiya = st.text_input("Operatsiya mazmuni", placeholder="Masalan: tovar xaridi")
+        sana = st.date_input("Operatsiya sanasi", key="provodka_sana")
+        summa = st.number_input("Summa (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="provodka_summa")
+        hujjat = st.text_input("Asoslovchi hujjat", placeholder="Hisob-faktura, dalolatnoma...")
+        izoh = st.text_area("Qo‘shimcha izoh")
+        submit_provodka = st.form_submit_button("Provodka shablonini yaratish")
+    if submit_provodka:
+        st.dataframe([{"Sana": str(sana), "Operatsiya": operatsiya, "Debet": "Tasdiqlash kerak", "Kredit": "Tasdiqlash kerak", "Summa (so‘m)": summa, "Hujjat": hujjat, "Izoh": izoh}], use_container_width=True)
+        st.warning("Debet va kredit schyotlari hisob siyosati hamda schyotlar rejasi asosida mutaxassis tomonidan tasdiqlanishi kerak.")
+
+with st.expander("🛡️ Soliq auditi tekshiruv ro‘yxati", expanded=(mode == "Soliq auditi")):
+    audit_items = ["Birlamchi hujjatlar mavjud va to‘liq", "Hisob-fakturalar hisob registrlariga mos", "QQS deklaratsiyasi registrlar bilan solishtirilgan", "Daromad va xarajatlar hujjatlar bilan tasdiqlangan", "Soliq davri va stavkalar tekshirilgan", "Imtiyozlar uchun asoslovchi hujjatlar mavjud"]
+    audit_checked = []
+    for item in audit_items:
+        if st.checkbox(item, key="audit_" + str(audit_items.index(item))): audit_checked.append(item)
+    if st.button("Audit xulosasi holatini ko‘rsatish", key="audit_result"):
+        st.write(f"Belgilangan: {len(audit_checked)} / {len(audit_items)} ta band")
+        st.write("Tekshirish kerak bo‘lgan bandlar:")
+        for item in audit_items:
+            if item not in audit_checked: st.write("- " + item)
+
+with st.expander("📄 Hujjatni tahlil qilish uchun yuklash", expanded=(mode == "Hujjatni tahlil qilish")):
+    uploaded_doc = st.file_uploader("PDF, TXT, CSV yoki rasm faylini tanlang", type=["pdf", "txt", "csv", "png", "jpg", "jpeg"], key="analysis_upload")
+    if uploaded_doc:
+        st.success(f"Fayl yuklandi: {uploaded_doc.name} ({uploaded_doc.size:,} bayt).")
+        st.info("Fayl tanlandi, ammo uning mazmunini avtomatik o‘qish format va OCR qo‘llab-quvvatlashiga bog‘liq. Hozircha matnni quyidagi AI chatga nusxalab yuboring yoki maxfiy ma’lumotlarni yashiring.")
+
 
 st.markdown('<div class="section-title">💬 AI bilan maslahat</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="chat-panel"><b>🧾 SOLIQ PRO AI</b> &nbsp; <span class="status-dot"></span><span style="color:#72E5B0">{"AI ulangan" if api_key_present else "Boshlang‘ich rejim"}</span><br><span style="color:#B8CBE0;font-size:13px">Joriy bo‘lim: {mode}</span></div>', unsafe_allow_html=True)
