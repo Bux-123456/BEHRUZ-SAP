@@ -710,3 +710,7 @@ with b1:
         st.rerun()
 with b2:
     st.markdown('<div class="footer-note">SOLIQ PRO AI — prototip. Natijalarni rasmiy manbalar va birlamchi hujjatlar bilan tekshiring. Rasmiy soliq API integratsiyasi mavjud emas.</div>', unsafe_allow_html=True)
+    ask_openai()
+    st.secrets
+    try/except
+    
