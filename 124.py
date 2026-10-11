@@ -1,0 +1,739 @@
+import os
+import re
+from datetime import datetime
+import streamlit as st
+
+st.set_page_config(page_title="SOLIQ PRO AI", page_icon="🧾", layout="wide", initial_sidebar_state="expanded")
+
+# Gemini API kalitini Streamlit Cloud Secrets yoki muhit o‘zgaruvchisidan olish
+try:
+    GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
+    GEMINI_MODEL = st.secrets.get("GEMINI_MODEL", os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"))
+except Exception:
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+    GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
+
+st.markdown("""
+<style>
+:root {
+  --navy: #050b2d;
+  --panel: #071337;
+  --panel2: #0b1b45;
+  --cyan: #00c8ff;
+  --blue: #087cff;
+  --line: #173b75;
+  --text: #f4f8ff;
+  --muted: #9ab0d0;
+}
+html, body, [class*="css"] { font-family: Inter, "Segoe UI", Arial, sans-serif; }
+.stApp, [data-testid="stAppViewContainer"] {
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(0,90,210,.22), transparent 48%),
+    repeating-linear-gradient(80deg, rgba(0,120,255,.055) 0 1px, transparent 1px 24px),
+    linear-gradient(180deg, #050a29 0%, #06143a 58%, #040a25 100%) !important;
+  color: var(--text) !important;
+}
+[data-testid="stHeader"] { background: rgba(4,9,37,.96) !important; border-bottom: 1px solid #122958; }
+[data-testid="stSidebar"], [data-testid="stSidebar"] > div {
+  background: linear-gradient(180deg,#050a27 0%,#08183d 100%) !important;
+  border-right: 1px solid #17366b !important;
+}
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp p, .stApp label,
+.stApp li, .stApp [data-testid="stMetricLabel"], .stApp [data-testid="stMetricValue"],
+.stApp [data-testid="stCaptionContainer"] { color: var(--text) !important; }
+.stApp h1 { font-weight: 850 !important; letter-spacing: -1px; }
+.stApp h2, .stApp h3 { font-weight: 800 !important; }
+[data-testid="stMetric"], [data-testid="stExpander"] {
+  background: linear-gradient(145deg,rgba(10,29,75,.98),rgba(5,15,48,.98)) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important; padding: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
+[data-testid="stMetricValue"] { font-weight: 800 !important; color: #fff !important; }
+[data-testid="stMetricLabel"] { color: #9ab0d0 !important; }
+[data-testid="stChatMessage"] {
+  background: linear-gradient(145deg,rgba(8,24,65,.98),rgba(5,14,43,.98)) !important;
+  color: #f4f8ff !important;
+  border: 1px solid #173d78 !important;
+  border-left: 3px solid var(--cyan) !important;
+  border-radius: 16px !important;
+  padding: 16px 18px !important; margin: 12px 0 !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,.18);
+}
+[data-testid="stChatMessage"] p, [data-testid="stChatMessage"] li,
+[data-testid="stChatMessage"] span { color: #eaf3ff !important; }
+[data-testid="stChatMessage"] p { line-height: 1.7 !important; }
+[data-testid="stChatMessage"] code { color: #b9f3ff !important; background: #06102f !important; border-radius: 5px; padding: 2px 5px; }
+[data-testid="stChatMessage"] a { color: #00d2ff !important; }
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] ul,
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] ol { padding-left: 1.4rem; }
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] table { width: 100%; }
+[data-testid="stChatInput"] {
+  background: rgba(5,16,49,.98) !important; border: 1px solid #1d4d8c !important;
+  border-radius: 17px !important; padding: 6px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.22);
+}
+[data-testid="stChatInput"] textarea {
+  background: #081638 !important; color: #f4f8ff !important;
+  border: 1px solid #173b75 !important; border-radius: 12px !important;
+  min-height: 54px !important;
+}
+[data-testid="stChatInput"] textarea::placeholder { color: #8da5c9 !important; }
+[data-testid="stChatInput"] button {
+  background: linear-gradient(135deg,#00bdf2,#087cff) !important;
+  color: white !important; border-radius: 11px !important;
+}
+.stButton > button { white-space: normal !important; line-height: 1.35 !important; }
+.stSpinner > div { border-top-color: #00c8ff !important; }
+.stButton > button, [data-testid="stFormSubmitButton"] > button {
+  background: linear-gradient(135deg,#087cff,#005bd7) !important;
+  color: #fff !important; border: 1px solid #168dff !important;
+  border-radius: 11px !important; font-weight: 700 !important;
+  min-height: 42px; transition: all .18s ease;
+}
+.stButton > button:hover, [data-testid="stFormSubmitButton"] > button:hover {
+  background: linear-gradient(135deg,#00bdf2,#087cff) !important;
+  border-color: #00d2ff !important; transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(0,200,255,.18);
+}
+.stTextInput input, .stTextArea textarea {
+  background: #081638 !important; color: #f4f8ff !important;
+  border: 1px solid #1d477f !important; border-radius: 11px !important;
+}
+.stTextInput input::placeholder, .stTextArea textarea::placeholder { color: #8da5c9 !important; }
+[data-testid="stSelectbox"] div[data-baseweb="select"] {
+  background: #081638 !important; color: #f4f8ff !important;
+  border-radius: 10px !important; border-color: #1d477f !important;
+}
+[data-testid="stSelectbox"] * { color: #f4f8ff !important; }
+/* Oq/pale input kataklaridagi matnlar ko‘k va aniq ko‘rinsin */
+.stNumberInput input, [data-testid="stNumberInput"] input,
+[data-testid="stDateInput"] input, [data-testid="stTimeInput"] input {
+  color: #0645ad !important;
+  -webkit-text-fill-color: #0645ad !important;
+  font-weight: 600 !important;
+}
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+  color: #0645ad !important;
+  -webkit-text-fill-color: #0645ad !important;
+}
+[data-testid="stSelectbox"] div[data-baseweb="select"] input,
+[data-testid="stSelectbox"] div[data-baseweb="select"] span,
+[data-testid="stSelectbox"] div[data-baseweb="select"] div {
+  color: #0645ad !important;
+  -webkit-text-fill-color: #0645ad !important;
+}
+[data-baseweb="popover"] [role="option"],
+[data-baseweb="menu"] [role="option"] {
+  color: #0645ad !important;
+  background: #f4f8ff !important;
+}
+[data-baseweb="popover"] [role="option"] *,
+[data-baseweb="menu"] [role="option"] * {
+  color: #0645ad !important;
+}
+.stApp a { color: #00c8ff !important; font-weight: 600; }
+hr { border-color: #17366b !important; }
+div[data-testid="stAlert"] { border-radius: 13px !important; }
+.hero {
+  position: relative; overflow: hidden;
+  padding: 30px 30px; border: 1px solid #164b91; border-radius: 22px;
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(0,142,255,.25), transparent 60%),
+    linear-gradient(115deg,rgba(7,22,65,.98),rgba(4,11,42,.98));
+  margin: 4px 0 18px; box-shadow: 0 16px 42px rgba(0,0,0,.28);
+}
+.hero:after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(105deg,transparent 0 28px,rgba(0,153,255,.05) 29px 30px);
+}
+.kicker {
+  display: inline-block; padding: 6px 12px; border-radius: 30px;
+  background: rgba(0,200,255,.10); border: 1px solid rgba(0,200,255,.25);
+  color: #00d2ff; font-size: 12px; font-weight: 750; letter-spacing: .4px; margin-bottom: 12px;
+}
+.hero-title { font-size: clamp(32px,4vw,49px); line-height: 1.08; font-weight: 900; color: #fff; letter-spacing: -1.5px; margin: 0 0 10px; }
+.hero-title span { color: #00c8ff; }
+.hero-sub { font-size: 17px; color: #b9c9e4; max-width: 800px; margin: 0 0 18px; }
+.feature-row { display: flex; flex-wrap: wrap; gap: 10px 22px; color: #d7e6fb; font-size: 13px; }
+.feature-row span:before {
+  content: '✓'; display: inline-flex; align-items: center; justify-content: center;
+  width: 19px; height: 19px; border-radius: 50%; background: #073f8a;
+  color: #8deaff; margin-right: 7px; font-weight: 900;
+}
+.section-title { font-size: 22px; font-weight: 800; margin: 20px 0 10px; color: #fff; }
+.quick-card {
+  border: 1px solid #173d78; border-left: 3px solid #00bfff; border-radius: 15px;
+  padding: 16px 15px 14px; min-height: 118px;
+  background: linear-gradient(145deg,rgba(7,22,62,.98),rgba(5,14,43,.98));
+  box-shadow: 0 8px 22px rgba(0,0,0,.18); transition: all .18s ease;
+}
+.quick-card:hover { border-color: #00aaff; box-shadow: 0 0 20px rgba(0,174,255,.12); transform: translateY(-2px); }
+.quick-card .icon { font-size: 25px; margin-bottom: 8px; color: #00c8ff; }
+.quick-card strong { display: block; color: #fff; font-size: 16px; margin-bottom: 6px; }
+.quick-card small { color: #9ab0d0; line-height: 1.45; font-size: 12px; }
+.chat-panel {
+  padding: 16px 18px; border: 1px solid #173d78; border-left: 3px solid #00c8ff;
+  border-radius: 16px; background: rgba(7,22,62,.92); margin: 4px 0 12px;
+}
+.status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #00c8ff; box-shadow: 0 0 10px #00aaff; margin-right: 7px; }
+.side-brand { font-size: 22px; font-weight: 850; letter-spacing: -.5px; color: #fff; }
+.side-brand span { color: #00c8ff; }
+.side-sub { color: #9ab0d0; font-size: 12px; margin-top: -5px; }
+.footer-note { color: #91a7c8; font-size: 12px; }
+@media (max-width: 750px) {
+  .hero { padding: 22px 18px; }
+  .hero-title { font-size: 31px; }
+  .hero-sub { font-size: 15px; }
+}
+
+/* Yon paneldagi rasmiy manbalar ro'yxati */
+.resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+.resource-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  color: #dceaff !important;
+  text-decoration: none !important;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+  border: 1px solid #142f60;
+  border-radius: 10px;
+  background: linear-gradient(110deg, rgba(10,29,72,.96), rgba(5,16,48,.96));
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.resource-link:hover {
+  color: #00d2ff !important;
+  border-color: #00aaff;
+  background: linear-gradient(110deg, rgba(9,43,94,.98), rgba(5,20,57,.98));
+  transform: translateX(2px);
+}
+.resource-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: #00c8ff;
+  background: rgba(0,174,255,.10);
+  border: 1px solid rgba(0,174,255,.22);
+  font-size: 16px;
+}
+
+
+/* Chap menyu: SOLIQ AI uslubidagi navigatsiya */
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
+  color: #f4f8ff !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  letter-spacing: .1px;
+  margin: 14px 0 10px !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] > label {
+  color: #9ab0d0 !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] {
+  gap: 7px !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 42px !important;
+  padding: 9px 11px !important;
+  margin: 0 !important;
+  border: 1px solid #142f60 !important;
+  border-left: 3px solid transparent !important;
+  border-radius: 10px !important;
+  background: linear-gradient(110deg,rgba(9,25,65,.96),rgba(5,15,45,.96)) !important;
+  transition: all .16s ease !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label:hover {
+  border-color: #1262a5 !important;
+  border-left-color: #00bfff !important;
+  background: linear-gradient(110deg,rgba(9,39,86,.98),rgba(5,19,55,.98)) !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) {
+  border-color: #14528e !important;
+  border-left-color: #00c8ff !important;
+  background: linear-gradient(110deg,rgba(7,53,105,.98),rgba(6,25,66,.98)) !important;
+  box-shadow: inset 0 0 18px rgba(0,160,255,.08), 0 0 12px rgba(0,145,255,.06) !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label p {
+  color: #dceaff !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) p {
+  color: #ffffff !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label > div:first-child {
+  margin-right: 8px !important;
+}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] hr {
+  margin: 17px 0 !important;
+  border-color: #17366b !important;
+}
+[data-testid="stSidebar"] [data-testid="stAlert"] {
+  background: rgba(8,27,68,.96) !important;
+  border: 1px solid #173b75 !important;
+  color: #b9c9e4 !important;
+}
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+  color: #8da5c9 !important;
+}
+@media (max-width: 750px) {
+  [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label {
+    min-height: 39px !important;
+    padding: 8px 9px !important;
+  }
+}
+
+
+.resource-description {
+  display: block;
+  color: #91a9cc;
+  font-size: 11px;
+  font-weight: 450;
+  line-height: 1.35;
+  margin-top: 3px;
+}
+.resource-link { text-decoration: none !important; }
+.resource-link:focus-visible {
+  outline: 2px solid #00c8ff;
+  outline-offset: 2px;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+SYSTEM_PROMPT = """
+Siz SOLIQ PRO AI — O‘zbekiston bo‘yicha buxgalteriya, moliya, soliq tahlili va audit yordamchisisiz. Foydalanuvchiga o‘zbek tilida, aniq va tartibli javob bering.
+Qoidalar:
+1. Qonun moddasi, soliq stavkasi, muddat yoki imtiyozni ishonchli manbasiz uydirmang.
+2. Qonunchilik o‘zgarishi mumkin. Zarur bo‘lsa soliq davri, soliq to‘lovchi maqomi, faoliyat turi va tegishli hujjatlarni aniqlashtiring.
+3. Rasmiy manbalarni tavsiya qiling: https://lex.uz/ va https://soliq.uz/. Tasdiqlanmagan modda yoki manbani tasdiqlangandek ko‘rsatmang.
+4. Hisob-kitobni formula, kiritilgan ma’lumotlar, taxminlar va natija ko‘rinishida bering.
+5. Provodkada debet, kredit, summa va operatsiya mazmunini alohida ko‘rsating. Schyot raqamini bilmasangiz taxmin qilmang.
+6. Auditda holat, dalil, ehtimoliy xavf, yetishmayotgan ma’lumot va keyingi qadamlarni ajrating.
+7. Parol, ERI kaliti, API kaliti yoki soliq tizimi tokenlarini chatga yuborishni so‘ramang.
+8. Zarur bo‘lsa “Tekshirish kerak” bo‘limini qo‘shing.
+9. Yordamchi professional tekshiruv o‘rnini bosmaydi; yakuniy hisobotdan oldin rasmiy manbalar va birlamchi hujjatlar bilan solishtiring.
+"""
+
+MODE_PROMPTS = {
+    "Umumiy maslahat": "Savolga umumiy va tushunarli javob bering.",
+    "QQS hisob-kitobi": "QQS bo‘yicha davr, to‘lovchi maqomi, operatsiya turi va summa QQS bilan yoki QQSsiz ekanini aniqlang. Stavkani taxmin qilmang.",
+    "Foyda solig‘i": "Daromad, chegiriladigan xarajatlar, soliq tuzatishlari va davrni ajrating. Tasdiqlanmagan stavkani ishlatmang.",
+    "Buxgalteriya provodkasi": "Operatsiya, debet, kredit, summa, hujjat va izoh ustunlari bilan javob bering. Schyot raqamini taxmin qilmang.",
+    "Soliq auditi": "Aniqlangan holat, dalil, xavf, yetishmayotgan ma’lumot va tavsiyani alohida bering.",
+    "Moliyaviy tahlil": "Ko‘rsatkichlar, formulalar, davrlar va taxminlarni aniq ajrating.",
+    "Hujjatni tahlil qilish": "Faqat berilgan matn yoki ma’lumotlarga tayaning; ko‘rinmayotgan faktlarni o‘ylab topmang. Maxfiy ma’lumotlarni yashirishni eslating."
+}
+
+def local_reply(question: str, mode: str) -> str:
+    q = question.lower().strip()
+    if mode == "QQS hisob-kitobi" or any(x in q for x in ["qqs", "qo‘shilgan qiymat", "qo'shilgan qiymat"]):
+        return ("**QQS bo‘yicha tahlil**\n\nKerakli ma’lumotlar:\n1. Soliq davri (oy/chorak va yil)\n2. Korxonaning QQS to‘lovchisi maqomi\n3. Operatsiya turi: realizatsiya, xarid, import, eksport yoki tuzatish\n4. Summa QQS bilanmi yoki QQSsizmi\n5. Birlamchi hujjat turi\n\nMen bu rejimda qonunchilikni internetdan avtomatik tekshirmayman. Amaldagi stavka, chegirma va muddatlarni [LexUZ](https://lex.uz/) yoki [Soliq qo‘mitasi](https://soliq.uz/) manbasidan tasdiqlang.")
+    if mode == "Foyda solig‘i" or any(x in q for x in ["foyda solig", "foyda solig‘i", "foyda solig'i"]):
+        return ("**Foyda solig‘i tahlili**\n\nQuyidagilarni kiriting: soliq davri, korxona turi, jami daromad, chegiriladigan xarajatlar, chegirilmaydigan xarajatlar va imtiyozlar.\n\n- Ishchi soliq bazasi = tegishli qoidalarga muvofiq daromad − chegiriladigan xarajatlar ± soliq tuzatishlari\n- Soliq summasi = soliq bazasi × tegishli davr uchun tasdiqlangan stavka\n\nBu umumiy tuzilma; aniq hisob uchun davrga tegishli qoidalarni tekshirish zarur.")
+    if mode == "Buxgalteriya provodkasi" or any(x in q for x in ["provodka", "debet", "kredit", "buxgalteriya yozuv"]):
+        return ("**Provodka tayyorlash**\n\nOperatsiya mazmuni, sana, summa, QQS holati, hujjat turi va hisob siyosatini yuboring.\n\nNatija: sana | operatsiya | debet | kredit | summa | asoslovchi hujjat | izoh.\n\nSchyot raqamlarini tasdiqlash uchun tegishli schyotlar rejasi va hisob siyosati kerak.")
+    if mode == "Soliq auditi" or any(x in q for x in ["audit", "xavf", "tafovut", "tekshir"]):
+        return ("**Dastlabki audit tahlili**\n\nHujjat yoki operatsiyalar jadvalini shaxsiy ma’lumotlarni yashirgan holda yuboring. Tahlilni quyidagicha tuzaman:\n1. Aniqlangan holat\n2. Dalil va hujjat\n3. Ehtimoliy soliq/buxgalteriya xavfi\n4. Yetishmayotgan ma’lumot\n5. Tavsiya etilgan tuzatish va qayta tekshirish.\n\nXulosa birlamchi hujjatlar va amaldagi me’yorlar bilan tasdiqlanishi kerak.")
+    return ("**SOLIQ PRO AI boshlang‘ich rejimda ishlayapti.** OpenAI API kaliti sozlanmagani uchun to‘liq AI javoblari hozircha mavjud emas.\n\nSavolingizga aniqroq javob berishim uchun soliq turi, davr, korxona maqomi va operatsiya ma’lumotlarini yozing. Amaldagi qonunchilikni [LexUZ](https://lex.uz/) va [Soliq qo‘mitasi](https://soliq.uz/) orqali tekshiring.")
+
+
+# Foydalanuvchi belgilagan LexUZ manbalari. Dastur ulardan matn olishga urinadi;
+# LexUZ sayti so'rovni cheklasa, AI buni yashirmasligi kerak.
+OFFICIAL_SOURCES = [
+    {"title": "LexUZ hujjati (-264422)", "url": "https://lex.uz/docs/-264422"},
+    {"title": "Soliq kodeksi / LexUZ (-4674902)", "url": "https://lex.uz/acts/-4674902"},
+    {"title": "LexUZ hujjati (-111453)", "url": "https://lex.uz/mact/-111453"},
+    {"title": "BHMS — milliy buxgalteriya standartlari", "url": "https://lex.uz/nsbu"},
+    {"title": "LexUZ hujjati (-5307886), 12.02.2025 holatiga", "url": "https://lex.uz/docs/-5307886?ONDATE=12.02.2025"},
+]
+
+class _TextExtractor(__import__("html.parser", fromlist=["HTMLParser"]).HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.parts = []
+        self.skip_depth = 0
+    def handle_starttag(self, tag, attrs):
+        if tag in ("script", "style", "noscript", "svg"):
+            self.skip_depth += 1
+        if tag in ("p", "div", "br", "li", "tr", "h1", "h2", "h3", "h4"):
+            self.parts.append("\n")
+    def handle_endtag(self, tag):
+        if tag in ("script", "style", "noscript", "svg") and self.skip_depth:
+            self.skip_depth -= 1
+        if tag in ("p", "div", "li", "tr", "h1", "h2", "h3", "h4"):
+            self.parts.append("\n")
+    def handle_data(self, data):
+        if not self.skip_depth:
+            cleaned = data.strip()
+            if cleaned:
+                self.parts.append(cleaned + " ")
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_source_text(url: str) -> str:
+    """Fetches and extracts page text; cached for one hour."""
+    from urllib.request import Request, urlopen
+    from html import unescape
+    request = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; SOLIQ-PRO-AI/1.0)"})
+    try:
+        with urlopen(request, timeout=10) as response:
+            raw = response.read(2_500_000)
+            charset = response.headers.get_content_charset() or "utf-8"
+        html_text = raw.decode(charset, errors="replace")
+        parser = _TextExtractor()
+        parser.feed(html_text)
+        text = unescape(" ".join(parser.parts))
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r"\n\s*\n+", "\n", text)
+        return text[:180_000]
+    except Exception:
+        return ""
+
+def retrieve_source_context(question: str, max_chars: int = 14000) -> tuple[str, list[str]]:
+    """Gets the most relevant paragraphs from the configured LexUZ pages."""
+    terms = {w for w in re.findall(r"[a-zA-Zа-яА-ЯўқғҳЎҚҒҲ‘’'-]{3,}", question.lower())
+             if w not in {"bilan", "uchun", "qanday", "kerak", "bo‘yicha", "bo'yicha", "menga", "iltimos"}}
+    blocks = []
+    fetched = []
+    for source in OFFICIAL_SOURCES:
+        page = fetch_source_text(source["url"])
+        if not page or len(page.strip()) < 150:
+            continue
+        fetched.append(source["title"] + " — " + source["url"])
+        paragraphs = [re.sub(r"\s+", " ", p).strip() for p in re.split(r"[\n\r]+", page) if len(p.strip()) > 60]
+        if not paragraphs:
+            paragraphs = [page[i:i+900] for i in range(0, min(len(page), 10000), 900)]
+        scored = []
+        for paragraph in paragraphs:
+            low = paragraph.lower()
+            score = sum(1 for term in terms if term in low)
+            if score:
+                scored.append((score, paragraph))
+        scored.sort(key=lambda item: item[0], reverse=True)
+        chosen = [p for _, p in scored[:5]]
+        if not chosen:
+            chosen = [page[:1200]]
+        blocks.append("MANBA: " + source["title"] + "\nURL: " + source["url"] + "\n" +
+                      "\n".join(chosen)[:3500])
+    if not blocks:
+        return ("Hozircha LexUZ manbalaridan matnni avtomatik olib bo‘lmadi. "
+                "Bu sahifalar tarmoq yoki sayt cheklovi sabab o‘qilmagan bo‘lishi mumkin."), fetched
+    return "\n\n---\n\n".join(blocks)[:max_chars], fetched
+
+
+def ask_gemini(messages, mode):
+    """Foydalanuvchi savoli va suhbat tarixini Gemini modeliga yuboradi."""
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY sozlanmagan. Streamlit Cloud → Settings → Secrets bo‘limini tekshiring.")
+    from google import genai
+    from google.genai import types
+
+    latest_question = next((item["content"] for item in reversed(messages) if item["role"] == "user"), "")
+    source_context, fetched_sources = retrieve_source_context(latest_question)
+    source_rules = (
+        "\n\nFOYDALANUVCHI TANLAGAN MANBALAR BO‘YICHA ISHLASH QOIDALARI:"
+        "\n- Avval quyida keltirilgan LexUZ manba parchalari asosida javob bering."
+        "\n- Manbada tasdiqlanmagan modda, band, stavka yoki muddatni manbadan olingandek ko‘rsatmang."
+        "\n- Manba javobni to‘liq tasdiqlamasa, buni ochiq ayting."
+        "\n- Qonun hujjatining amaldagi tahriri yoki sana muhim bo‘lsa, rasmiy tekshirish zarurligini eslating."
+        "\n- Javobda manba nomi va havolasini ko‘rsating."
+        "\n\nOLINGAN MANBA MATNI:\n" + source_context
+    )
+    system_instruction = SYSTEM_PROMPT + "\n\nTanlangan ish bo‘limi: " + mode + "\n" + MODE_PROMPTS.get(mode, "") + source_rules
+    contents = []
+    for item in messages[-16:]:
+        role = "user" if item.get("role") == "user" else "model"
+        contents.append(types.Content(role=role, parts=[types.Part.from_text(text=str(item.get("content", "")))]))
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=contents,
+        config=types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            max_output_tokens=4096,
+        ),
+    )
+    answer = (response.text or "").strip()
+    if not answer:
+        raise RuntimeError("Gemini bo‘sh javob qaytardi. Savolni qayta yuboring yoki boshqa modelni tekshiring.")
+    if fetched_sources:
+        answer += "\n\n**Avtomatik o‘qilgan manbalar:**\n" + "\n".join(
+            "- [" + name.split(" — ")[0] + "](" + name.split(" — ", 1)[1] + ")" for name in fetched_sources
+        )
+    else:
+        answer += "\n\n**Manba holati:** LexUZ sahifalaridan matnni avtomatik olish imkoni bo‘lmadi. Javobni rasmiy saytda tekshiring."
+    return answer
+
+# Sidebar: navigation and official resources
+with st.sidebar:
+    st.markdown('<div class="side-brand">🧾 SOLIQ PRO <span>AI</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="side-sub">Soliq va buxgalteriya yordamchisi</div>', unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown("### 🧭 Ish bo‘limlari")
+    section_options = [
+        "🏠  Bosh sahifa",
+        "💬  Yangi maslahat",
+        "🧮  QQS hisob-kitobi",
+        "📊  Foyda solig‘i",
+        "📘  Buxgalteriya provodkasi",
+        "🛡️  Soliq auditi",
+        "📈  Moliyaviy tahlil",
+        "📄  Hujjatni tahlil qilish",
+    ]
+    section_labels = {
+        "🏠  Bosh sahifa": "Bosh sahifa",
+        "💬  Yangi maslahat": "Yangi maslahat",
+        "🧮  QQS hisob-kitobi": "QQS hisob-kitobi",
+        "📊  Foyda solig‘i": "Foyda solig‘i",
+        "📘  Buxgalteriya provodkasi": "Buxgalteriya provodkasi",
+        "🛡️  Soliq auditi": "Soliq auditi",
+        "📈  Moliyaviy tahlil": "Moliyaviy tahlil",
+        "📄  Hujjatni tahlil qilish": "Hujjatni tahlil qilish",
+    }
+    if "selected_section_label" not in st.session_state:
+        st.session_state["selected_section_label"] = "🏠  Bosh sahifa"
+    selected_section_label = st.radio(
+        "Bo‘limni tanlang",
+        section_options,
+        key="selected_section_label",
+        label_visibility="collapsed",
+    )
+    section = section_labels[selected_section_label]
+    st.markdown("---")
+    st.markdown("### 🌐 Rasmiy manbalar")
+    st.markdown("""
+    <div class="resource-list">
+      <a class="resource-link" href="https://lex.uz/" target="_blank" rel="noopener noreferrer">
+        <span class="resource-icon">⚖</span>
+        <span><strong>LexUZ — qonunchilik</strong><small class="resource-description">Kodekslar, qonunlar va qarorlar</small></span>
+      </a>
+      <a class="resource-link" href="https://my.soliq.uz/" target="_blank" rel="noopener noreferrer">
+        <span class="resource-icon">▣</span>
+        <span><strong>Elektron soliq xizmatlari</strong><small class="resource-description">Soliq to‘lovchilar uchun onlayn xizmatlar</small></span>
+      </a>
+      <a class="resource-link" href="https://ai.soliq.uz/" target="_blank" rel="noopener noreferrer">
+        <span class="resource-icon">✦</span>
+        <span><strong>AI SOLIQ</strong><small class="resource-description">Soliq masalalari bo‘yicha AI xizmatlari</small></span>
+      </a>
+    </div>
+    """, unsafe_allow_html=True)
+    with st.expander("📚 AI foydalanadigan huquqiy manbalar", expanded=False):
+        st.caption("AI har bir savolda ushbu sahifalardan matn olishga urinadi. Sayt javob bermasa, bu holat javobda ko‘rsatiladi.")
+        for source in OFFICIAL_SOURCES:
+            st.markdown(f"- [{source['title']}]({source['url']})")
+    st.info("Muhim: soliq stavkalari, muddatlar va qonuniy talablarni rasmiy manbadan tekshiring.")
+    st.caption("Prototip soliq hisobotini avtomatik yubormaydi va soliq tizimlariga ulanmagan.")
+
+mode_map = {
+    "Bosh sahifa": "Umumiy maslahat", "Yangi maslahat": "Umumiy maslahat",
+    "QQS hisob-kitobi": "QQS hisob-kitobi", "Foyda solig‘i": "Foyda solig‘i",
+    "Buxgalteriya provodkasi": "Buxgalteriya provodkasi", "Soliq auditi": "Soliq auditi",
+    "Moliyaviy tahlil": "Moliyaviy tahlil", "Hujjatni tahlil qilish": "Hujjatni tahlil qilish"
+}
+mode = mode_map[section]
+
+st.markdown("""
+<div class="hero">
+  <div class="kicker">O‘ZBEKISTON UCHUN · SOLIQ VA BUXGALTERIYA</div>
+  <div class="hero-title">SOLIQ PRO <span>AI</span></div>
+  <div class="hero-sub">Soliq, buxgalteriya, moliya va audit bo‘yicha kundalik ishlaringiz uchun aqlli yordamchi.</div>
+  <div class="feature-row"><span>Tartibli tushuntirishlar</span><span>Amaliy hisob-kitoblar</span><span>Rasmiy manbalarni eslatish</span></div>
+</div>
+""", unsafe_allow_html=True)
+
+api_key_present = bool(GEMINI_API_KEY)
+c1, c2, c3 = st.columns(3)
+with c1: st.metric("Ishlash rejimi", "AI ulangan" if api_key_present else "Boshlang‘ich rejim")
+with c2: st.metric("Til", "O‘zbek")
+with c3: st.metric("Bugungi sana", datetime.now().strftime("%d.%m.%Y"))
+
+st.markdown('<div class="section-title">⚡ Tezkor bo‘limlar</div>', unsafe_allow_html=True)
+card_cols = st.columns(4)
+cards = [
+    ("🧮", "QQS", "QQS operatsiyalari va hisob-kitob", "QQS hisob-kitobi"),
+    ("📊", "Foyda solig‘i", "Soliq bazasi va xarajatlar tahlili", "Foyda solig‘i"),
+    ("📘", "Provodkalar", "Debet, kredit va operatsiya izohi", "Buxgalteriya provodkasi"),
+    ("🛡️", "Audit", "Xavflar va tekshiruv bosqichlari", "Soliq auditi"),
+]
+for col, (icon, title, desc, target) in zip(card_cols, cards):
+    with col:
+        st.markdown(f'<div class="quick-card"><div class="icon">{icon}</div><strong>{title}</strong><small>{desc}</small></div>', unsafe_allow_html=True)
+        if st.button("Bo‘limni ochish →", key="go_" + target, use_container_width=True):
+            st.session_state["active_mode"] = mode_map[target]
+            st.rerun()
+
+# Shortcut kartochkasi tanlansa, tanlangan ish rejimini saqlash
+if "active_mode" not in st.session_state:
+    st.session_state["active_mode"] = mode
+elif section != "Bosh sahifa" and mode != st.session_state["active_mode"]:
+    st.session_state["active_mode"] = mode
+mode = st.session_state["active_mode"]
+
+
+# Amaliy ish qurollari: hisob-kitoblar va hujjat yuklash
+st.markdown('<div class="section-title">🛠️ Amaliy vositalar</div>', unsafe_allow_html=True)
+with st.expander("🧮 QQS kalkulyatori", expanded=(mode == "QQS hisob-kitobi")):
+    q1, q2, q3 = st.columns(3)
+    with q1:
+        qqs_summa = st.number_input("Operatsiya summasi (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="qqs_summa")
+    with q2:
+        qqs_stavka = st.number_input("QQS stavkasi (%) — tekshirilgan stavkani kiriting", min_value=0.0, max_value=100.0, value=12.0, step=1.0, key="qqs_stavka")
+    with q3:
+        qqs_turi = st.selectbox("Summa turi", ["QQSsiz summa", "QQS bilan summa"], key="qqs_turi")
+    if st.button("QQSni hisoblash", key="calc_qqs"):
+        if qqs_turi == "QQSsiz summa":
+            baza = qqs_summa
+            qqs = baza * qqs_stavka / 100
+            jami = baza + qqs
+        else:
+            jami = qqs_summa
+            baza = jami / (1 + qqs_stavka / 100) if qqs_stavka else jami
+            qqs = jami - baza
+        r1, r2, r3 = st.columns(3)
+        r1.metric("Soliq bazasi", f"{baza:,.2f} so‘m")
+        r2.metric("QQS summasi", f"{qqs:,.2f} so‘m")
+        r3.metric("Jami summa", f"{jami:,.2f} so‘m")
+        st.caption("Hisob-kitob siz kiritgan stavka asosida. Amaldagi stavka va imtiyozlarni rasmiy manbadan tekshiring.")
+
+with st.expander("📊 Foyda solig‘i kalkulyatori", expanded=(mode == "Foyda solig‘i")):
+    f1, f2, f3 = st.columns(3)
+    with f1: daromad = st.number_input("Jami daromad (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="foyda_daromad")
+    with f2: xarajat = st.number_input("Chegiriladigan xarajatlar (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="foyda_xarajat")
+    with f3: foyda_stavka = st.number_input("Stavka (%) — tekshirilgan stavkani kiriting", min_value=0.0, max_value=100.0, value=15.0, step=1.0, key="foyda_stavka")
+    tuzatish = st.number_input("Soliq bazasiga qo‘shiladigan tuzatishlar (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="foyda_tuzatish")
+    if st.button("Foyda solig‘ini hisoblash", key="calc_foyda"):
+        baza = max(0.0, daromad - xarajat + tuzatish)
+        soliq = baza * foyda_stavka / 100
+        r1, r2 = st.columns(2)
+        r1.metric("Hisobiy soliq bazasi", f"{baza:,.2f} so‘m")
+        r2.metric("Hisobiy soliq summasi", f"{soliq:,.2f} so‘m")
+        st.caption("Soddalashtirilgan hisob. Soliq tuzatishlari, imtiyozlar va soliq davriga tegishli qoidalar alohida tekshiriladi.")
+
+with st.expander("📈 Moliyaviy ko‘rsatkichlar tahlili", expanded=(mode == "Moliyaviy tahlil")):
+    m1, m2, m3 = st.columns(3)
+    with m1: tushum = st.number_input("Tushum (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="mol_tushum")
+    with m2: xarajat_mol = st.number_input("Xarajatlar (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="mol_xarajat")
+    with m3: aktiv = st.number_input("Jami aktivlar (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="mol_aktiv")
+    majburiyat = st.number_input("Jami majburiyatlar (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="mol_majburiyat")
+    if st.button("Moliyaviy tahlil qilish", key="calc_mol"):
+        foyda = tushum - xarajat_mol
+        rentabellik = (foyda / tushum * 100) if tushum else 0
+        qarz_ulushi = (majburiyat / aktiv * 100) if aktiv else 0
+        a, b, c = st.columns(3)
+        a.metric("Hisobiy foyda", f"{foyda:,.2f} so‘m")
+        b.metric("Foyda marjasi", f"{rentabellik:.2f}%")
+        c.metric("Majburiyatlar / aktivlar", f"{qarz_ulushi:.2f}%")
+        st.caption("Ko‘rsatkichlar kiritilgan ma’lumotlarga asoslangan; bu to‘liq moliyaviy audit emas.")
+
+with st.expander("📘 Buxgalteriya provodkasi uchun shablon", expanded=(mode == "Buxgalteriya provodkasi")):
+    with st.form("provodka_form"):
+        operatsiya = st.text_input("Operatsiya mazmuni", placeholder="Masalan: tovar xaridi")
+        sana = st.date_input("Operatsiya sanasi", key="provodka_sana")
+        summa = st.number_input("Summa (so‘m)", min_value=0.0, value=0.0, step=100000.0, key="provodka_summa")
+        hujjat = st.text_input("Asoslovchi hujjat", placeholder="Hisob-faktura, dalolatnoma...")
+        izoh = st.text_area("Qo‘shimcha izoh")
+        submit_provodka = st.form_submit_button("Provodka shablonini yaratish")
+    if submit_provodka:
+        st.dataframe([{"Sana": str(sana), "Operatsiya": operatsiya, "Debet": "Tasdiqlash kerak", "Kredit": "Tasdiqlash kerak", "Summa (so‘m)": summa, "Hujjat": hujjat, "Izoh": izoh}], use_container_width=True)
+        st.warning("Debet va kredit schyotlari hisob siyosati hamda schyotlar rejasi asosida mutaxassis tomonidan tasdiqlanishi kerak.")
+
+with st.expander("🛡️ Soliq auditi tekshiruv ro‘yxati", expanded=(mode == "Soliq auditi")):
+    audit_items = ["Birlamchi hujjatlar mavjud va to‘liq", "Hisob-fakturalar hisob registrlariga mos", "QQS deklaratsiyasi registrlar bilan solishtirilgan", "Daromad va xarajatlar hujjatlar bilan tasdiqlangan", "Soliq davri va stavkalar tekshirilgan", "Imtiyozlar uchun asoslovchi hujjatlar mavjud"]
+    audit_checked = []
+    for item in audit_items:
+        if st.checkbox(item, key="audit_" + str(audit_items.index(item))): audit_checked.append(item)
+    if st.button("Audit xulosasi holatini ko‘rsatish", key="audit_result"):
+        st.write(f"Belgilangan: {len(audit_checked)} / {len(audit_items)} ta band")
+        st.write("Tekshirish kerak bo‘lgan bandlar:")
+        for item in audit_items:
+            if item not in audit_checked: st.write("- " + item)
+
+with st.expander("📄 Hujjatni tahlil qilish uchun yuklash", expanded=(mode == "Hujjatni tahlil qilish")):
+    uploaded_doc = st.file_uploader("PDF, TXT, CSV yoki rasm faylini tanlang", type=["pdf", "txt", "csv", "png", "jpg", "jpeg"], key="analysis_upload")
+    if uploaded_doc:
+        st.success(f"Fayl yuklandi: {uploaded_doc.name} ({uploaded_doc.size:,} bayt).")
+        st.info("Fayl tanlandi, ammo uning mazmunini avtomatik o‘qish format va OCR qo‘llab-quvvatlashiga bog‘liq. Hozircha matnni quyidagi AI chatga nusxalab yuboring yoki maxfiy ma’lumotlarni yashiring.")
+
+
+st.markdown('<div class="section-title">💬 AI bilan maslahat</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="chat-panel"><b>🧾 SOLIQ PRO AI</b> &nbsp; <span class="status-dot"></span><span style="color:#72E5B0">{"AI ulangan" if api_key_present else "Boshlang‘ich rejim"}</span><br><span style="color:#B8CBE0;font-size:13px">Joriy bo‘lim: {mode}</span></div>', unsafe_allow_html=True)
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+if not st.session_state.messages:
+    st.markdown("""
+    <div style="padding:18px 20px;border:1px solid #2B5682;border-radius:18px;background:linear-gradient(120deg,rgba(20,61,102,.92),rgba(8,31,55,.96));margin:8px 0 14px;">
+      <div style="font-size:20px;font-weight:800;color:#FFFFFF;margin-bottom:6px;">Assalomu alaykum! 👋</div>
+      <div style="color:#D5E4F4;line-height:1.65;">Men SOLIQ PRO AI yordamchisiman. Quyidagi tezkor savollardan birini tanlang yoki o‘z savolingizni yozing.</div>
+      <div style="color:#8AF0BE;font-size:12px;margin-top:10px;">Maslahat: soliq davri va operatsiya tafsilotlarini yozsangiz, javob aniqroq bo‘ladi. Maxfiy ma’lumotlarni yubormang.</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+suggestions = st.columns(4)
+suggestion_texts = ["QQS bo‘yicha nimalar kerak?", "Foyda solig‘i bazasini tushuntir", "Provodka tuzish uchun ma’lumotlar", "Audit xavflarini qanday ko‘raman?"]
+for col, suggestion in zip(suggestions, suggestion_texts):
+    with col:
+        if st.button(suggestion, key="suggest_" + str(suggestion), use_container_width=True):
+            st.session_state["pending_prompt"] = suggestion
+            st.rerun()
+
+prompt = st.chat_input("Soliq, buxgalteriya yoki audit bo‘yicha savolingizni yozing...")
+if st.session_state.get("pending_prompt"):
+    prompt = st.session_state.pop("pending_prompt")
+
+if prompt:
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    with st.chat_message("assistant"):
+        with st.spinner("Javob tayyorlanmoqda..."):
+            try:
+                if api_key_present:
+                    answer = ask_gemini(st.session_state.messages, mode)
+                else:
+                    answer = local_reply(prompt, mode)
+                st.markdown(answer)
+            except Exception as exc:
+                # Foydalanuvchiga umumiy xabar bilan birga sababini ham ko‘rsatamiz.
+                # Maxfiy API kaliti xato matniga tushib qolsa, uni yashiramiz.
+                error_detail = f"{type(exc).__name__}: {exc}"
+                if GEMINI_API_KEY:
+                    error_detail = error_detail.replace(GEMINI_API_KEY, "[API kaliti yashirildi]")
+                answer = (
+                    "AI xizmatiga ulanishda muammo yuz berdi. Quyidagi xatolik tafsilotini "
+                    "tekshiring. API kalitini chatga yoki GitHub kodiga yubormang."
+                )
+                st.error(answer)
+                with st.expander("Xatolik tafsilotlari"):
+                    st.code(error_detail)
+    st.session_state.messages.append({"role": "assistant", "content": answer})
+
+b1, b2 = st.columns([1, 4])
+with b1:
+    if st.button("🗑️ Suhbatni tozalash", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
+with b2:
+    st.markdown('<div class="footer-note">SOLIQ PRO AI — prototip. Natijalarni rasmiy manbalar va birlamchi hujjatlar bilan tekshiring. Rasmiy soliq API integratsiyasi mavjud emas.</div>', unsafe_allow_html=True)
