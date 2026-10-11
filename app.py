@@ -5,13 +5,13 @@ import streamlit as st
 
 st.set_page_config(page_title="SOLIQ PRO AI", page_icon="🧾", layout="wide", initial_sidebar_state="expanded")
 
-# Xavfsiz tarzda Streamlit Cloud Secrets yoki muhit o‘zgaruvchisidan API kalitini olish
+# Gemini API kalitini Streamlit Cloud Secrets yoki muhit o‘zgaruvchisidan olish
 try:
-    OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
-    OPENAI_MODEL = st.secrets.get("OPENAI_MODEL", os.environ.get("OPENAI_MODEL", "gpt-4.1-mini"))
+    GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
+    GEMINI_MODEL = st.secrets.get("GEMINI_MODEL", os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"))
 except Exception:
-    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-    OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+    GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 st.markdown("""
 <style>
@@ -437,31 +437,49 @@ def retrieve_source_context(question: str, max_chars: int = 14000) -> tuple[str,
     return "\n\n---\n\n".join(blocks)[:max_chars], fetched
 
 
-def ask_openai(messages, mode):
-    if not OPENAI_API_KEY:
-        raise RuntimeError("OPENAI_API_KEY sozlanmagan")
-    from openai import OpenAI
-    client = OpenAI(api_key=OPENAI_API_KEY)
+def ask_gemini(messages, mode):
+    """Foydalanuvchi savoli va suhbat tarixini Gemini modeliga yuboradi."""
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY sozlanmagan. Streamlit Cloud → Settings → Secrets bo‘limini tekshiring.")
+    from google import genai
+    from google.genai import types
+
     latest_question = next((item["content"] for item in reversed(messages) if item["role"] == "user"), "")
     source_context, fetched_sources = retrieve_source_context(latest_question)
     source_rules = (
-        "\\n\\nFOYDALANUVCHI TANLAGAN MANBALAR BO‘YICHA ISHLASH QOIDALARI:"
-        "\\n- Avval quyida keltirilgan LexUZ manba parchalari asosida javob bering."
-        "\\n- Manbada tasdiqlanmagan modda, band, stavka yoki muddatni manbadan olingandek ko‘rsatmang."
-        "\\n- Agar manba parchalari javobni to‘liq tasdiqlamasa, buni ochiq ayting; keyin umumiy bilimdan foydalanishingiz mumkin, lekin uni ‘AI umumiy bilimi’ deb belgilang."
-        "\\n- Qonun hujjatining amaldagi tahriri yoki sana muhim bo‘lsa, sana bo‘yicha tekshirish zarurligini eslating."
-        "\\n- Foydalanuvchi so‘ragan javobda manba nomi va havolasini ko‘rsating."
-        "\\n\\nOLINGAN MANBA MATNI:\\n" + source_context
+        "\n\nFOYDALANUVCHI TANLAGAN MANBALAR BO‘YICHA ISHLASH QOIDALARI:"
+        "\n- Avval quyida keltirilgan LexUZ manba parchalari asosida javob bering."
+        "\n- Manbada tasdiqlanmagan modda, band, stavka yoki muddatni manbadan olingandek ko‘rsatmang."
+        "\n- Manba javobni to‘liq tasdiqlamasa, buni ochiq ayting."
+        "\n- Qonun hujjatining amaldagi tahriri yoki sana muhim bo‘lsa, rasmiy tekshirish zarurligini eslating."
+        "\n- Javobda manba nomi va havolasini ko‘rsating."
+        "\n\nOLINGAN MANBA MATNI:\n" + source_context
     )
-    api_messages = [{"role": "system", "content": SYSTEM_PROMPT + "\\n\\nTanlangan ish bo‘limi: " + mode + "\\n" + MODE_PROMPTS.get(mode, "") + source_rules}]
+    system_instruction = SYSTEM_PROMPT + "\n\nTanlangan ish bo‘limi: " + mode + "\n" + MODE_PROMPTS.get(mode, "") + source_rules
+    contents = []
     for item in messages[-16:]:
-        api_messages.append({"role": item["role"], "content": item["content"]})
-    response = client.responses.create(model=OPENAI_MODEL, input=api_messages)
-    answer = response.output_text
+        role = "user" if item.get("role") == "user" else "model"
+        contents.append(types.Content(role=role, parts=[types.Part.from_text(text=str(item.get("content", "")))]))
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=contents,
+        config=types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.4,
+            max_output_tokens=4096,
+        ),
+    )
+    answer = (response.text or "").strip()
+    if not answer:
+        raise RuntimeError("Gemini bo‘sh javob qaytardi. Savolni qayta yuboring yoki boshqa modelni tekshiring.")
     if fetched_sources:
-        answer += "\\n\\n**Avtomatik o‘qilgan manbalar:**\\n" + "\\n".join("- [" + name.split(" — ")[0] + "](" + name.split(" — ", 1)[1] + ")" for name in fetched_sources)
+        answer += "\n\n**Avtomatik o‘qilgan manbalar:**\n" + "\n".join(
+            "- [" + name.split(" — ")[0] + "](" + name.split(" — ", 1)[1] + ")" for name in fetched_sources
+        )
     else:
-        answer += "\\n\\n**Manba holati:** LexUZ sahifalaridan matnni avtomatik olishning imkoni bo‘lmadi. Yuqoridagi javob manbadan tasdiqlangan deb hisoblanmasin; zarur hujjat matnini yuklang yoki rasmiy saytda tekshiring."
+        answer += "\n\n**Manba holati:** LexUZ sahifalaridan matnni avtomatik olish imkoni bo‘lmadi. Javobni rasmiy saytda tekshiring."
     return answer
 
 # Sidebar: navigation and official resources
@@ -541,7 +559,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-api_key_present = bool(OPENAI_API_KEY)
+api_key_present = bool(GEMINI_API_KEY)
 c1, c2, c3 = st.columns(3)
 with c1: st.metric("Ishlash rejimi", "AI ulangan" if api_key_present else "Boshlang‘ich rejim")
 with c2: st.metric("Til", "O‘zbek")
@@ -694,7 +712,7 @@ if prompt:
         with st.spinner("Javob tayyorlanmoqda..."):
             try:
                 if api_key_present:
-                    answer = ask_openai(st.session_state.messages, mode)
+                    answer = ask_gemini(st.session_state.messages, mode)
                 else:
                     answer = local_reply(prompt, mode)
                 st.markdown(answer)
@@ -702,8 +720,8 @@ if prompt:
                 # Foydalanuvchiga umumiy xabar bilan birga sababini ham ko‘rsatamiz.
                 # Maxfiy API kaliti xato matniga tushib qolsa, uni yashiramiz.
                 error_detail = f"{type(exc).__name__}: {exc}"
-                if OPENAI_API_KEY:
-                    error_detail = error_detail.replace(OPENAI_API_KEY, "[API kaliti yashirildi]")
+                if GEMINI_API_KEY:
+                    error_detail = error_detail.replace(GEMINI_API_KEY, "[API kaliti yashirildi]")
                 answer = (
                     "AI xizmatiga ulanishda muammo yuz berdi. Quyidagi xatolik tafsilotini "
                     "tekshiring. API kalitini chatga yoki GitHub kodiga yubormang."
