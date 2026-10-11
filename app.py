@@ -8,10 +8,10 @@ st.set_page_config(page_title="SOLIQ PRO AI", page_icon="🧾", layout="wide", i
 # Gemini API kalitini Streamlit Cloud Secrets yoki muhit o‘zgaruvchisidan olish
 try:
     GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
-    GEMINI_MODEL = st.secrets.get("GEMINI_MODEL", os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"))
+    GEMINI_MODEL = st.secrets.get("GEMINI_MODEL", os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"))
 except Exception:
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-    GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
 
 st.markdown("""
 <style>
@@ -467,7 +467,6 @@ def ask_gemini(messages, mode):
         contents=contents,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,
-            temperature=0.4,
             max_output_tokens=4096,
         ),
     )
