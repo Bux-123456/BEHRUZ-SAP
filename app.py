@@ -202,6 +202,76 @@ div[data-testid="stAlert"] { border-radius: 13px !important; }
   font-size: 16px;
 }
 
+
+/* Chap menyu: SOLIQ AI uslubidagi navigatsiya */
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
+  color: #f4f8ff !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  letter-spacing: .1px;
+  margin: 14px 0 10px !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] > label {
+  color: #9ab0d0 !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] {
+  gap: 7px !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 42px !important;
+  padding: 9px 11px !important;
+  margin: 0 !important;
+  border: 1px solid #142f60 !important;
+  border-left: 3px solid transparent !important;
+  border-radius: 10px !important;
+  background: linear-gradient(110deg,rgba(9,25,65,.96),rgba(5,15,45,.96)) !important;
+  transition: all .16s ease !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label:hover {
+  border-color: #1262a5 !important;
+  border-left-color: #00bfff !important;
+  background: linear-gradient(110deg,rgba(9,39,86,.98),rgba(5,19,55,.98)) !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) {
+  border-color: #14528e !important;
+  border-left-color: #00c8ff !important;
+  background: linear-gradient(110deg,rgba(7,53,105,.98),rgba(6,25,66,.98)) !important;
+  box-shadow: inset 0 0 18px rgba(0,160,255,.08), 0 0 12px rgba(0,145,255,.06) !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label p {
+  color: #dceaff !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) p {
+  color: #ffffff !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label > div:first-child {
+  margin-right: 8px !important;
+}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] hr {
+  margin: 17px 0 !important;
+  border-color: #17366b !important;
+}
+[data-testid="stSidebar"] [data-testid="stAlert"] {
+  background: rgba(8,27,68,.96) !important;
+  border: 1px solid #173b75 !important;
+  color: #b9c9e4 !important;
+}
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+  color: #8da5c9 !important;
+}
+@media (max-width: 750px) {
+  [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] > label {
+    min-height: 39px !important;
+    padding: 8px 9px !important;
+  }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -256,7 +326,35 @@ with st.sidebar:
     st.markdown('<div class="side-sub">Soliq va buxgalteriya yordamchisi</div>', unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### 🧭 Ish bo‘limlari")
-    section = st.radio("Bo‘limni tanlang", ["Bosh sahifa", "Yangi maslahat", "QQS hisob-kitobi", "Foyda solig‘i", "Buxgalteriya provodkasi", "Soliq auditi", "Moliyaviy tahlil", "Hujjatni tahlil qilish"], label_visibility="collapsed")
+    section_options = [
+        "🏠  Bosh sahifa",
+        "💬  Yangi maslahat",
+        "🧮  QQS hisob-kitobi",
+        "📊  Foyda solig‘i",
+        "📘  Buxgalteriya provodkasi",
+        "🛡️  Soliq auditi",
+        "📈  Moliyaviy tahlil",
+        "📄  Hujjatni tahlil qilish",
+    ]
+    section_labels = {
+        "🏠  Bosh sahifa": "Bosh sahifa",
+        "💬  Yangi maslahat": "Yangi maslahat",
+        "🧮  QQS hisob-kitobi": "QQS hisob-kitobi",
+        "📊  Foyda solig‘i": "Foyda solig‘i",
+        "📘  Buxgalteriya provodkasi": "Buxgalteriya provodkasi",
+        "🛡️  Soliq auditi": "Soliq auditi",
+        "📈  Moliyaviy tahlil": "Moliyaviy tahlil",
+        "📄  Hujjatni tahlil qilish": "Hujjatni tahlil qilish",
+    }
+    if "selected_section_label" not in st.session_state:
+        st.session_state["selected_section_label"] = "🏠  Bosh sahifa"
+    selected_section_label = st.radio(
+        "Bo‘limni tanlang",
+        section_options,
+        key="selected_section_label",
+        label_visibility="collapsed",
+    )
+    section = section_labels[selected_section_label]
     st.markdown("---")
     st.markdown("### 🌐 Rasmiy manbalar")
     st.markdown("""
@@ -375,4 +473,3 @@ with b1:
         st.rerun()
 with b2:
     st.markdown('<div class="footer-note">SOLIQ PRO AI — prototip. Natijalarni rasmiy manbalar va birlamchi hujjatlar bilan tekshiring. Rasmiy soliq API integratsiyasi mavjud emas.</div>', unsafe_allow_html=True)
-    
