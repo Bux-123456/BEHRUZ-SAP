@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 import streamlit as st
 
@@ -352,16 +353,116 @@ def local_reply(question: str, mode: str) -> str:
         return ("**Dastlabki audit tahlili**\n\nHujjat yoki operatsiyalar jadvalini shaxsiy ma’lumotlarni yashirgan holda yuboring. Tahlilni quyidagicha tuzaman:\n1. Aniqlangan holat\n2. Dalil va hujjat\n3. Ehtimoliy soliq/buxgalteriya xavfi\n4. Yetishmayotgan ma’lumot\n5. Tavsiya etilgan tuzatish va qayta tekshirish.\n\nXulosa birlamchi hujjatlar va amaldagi me’yorlar bilan tasdiqlanishi kerak.")
     return ("**SOLIQ PRO AI boshlang‘ich rejimda ishlayapti.** OpenAI API kaliti sozlanmagani uchun to‘liq AI javoblari hozircha mavjud emas.\n\nSavolingizga aniqroq javob berishim uchun soliq turi, davr, korxona maqomi va operatsiya ma’lumotlarini yozing. Amaldagi qonunchilikni [LexUZ](https://lex.uz/) va [Soliq qo‘mitasi](https://soliq.uz/) orqali tekshiring.")
 
+
+# Foydalanuvchi belgilagan LexUZ manbalari. Dastur ulardan matn olishga urinadi;
+# LexUZ sayti so'rovni cheklasa, AI buni yashirmasligi kerak.
+OFFICIAL_SOURCES = [
+    {"title": "LexUZ hujjati (-264422)", "url": "https://lex.uz/docs/-264422"},
+    {"title": "Soliq kodeksi / LexUZ (-4674902)", "url": "https://lex.uz/acts/-4674902"},
+    {"title": "LexUZ hujjati (-111453)", "url": "https://lex.uz/mact/-111453"},
+    {"title": "BHMS — milliy buxgalteriya standartlari", "url": "https://lex.uz/nsbu"},
+    {"title": "LexUZ hujjati (-5307886), 12.02.2025 holatiga", "url": "https://lex.uz/docs/-5307886?ONDATE=12.02.2025"},
+]
+
+class _TextExtractor(__import__("html.parser", fromlist=["HTMLParser"]).HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.parts = []
+        self.skip_depth = 0
+    def handle_starttag(self, tag, attrs):
+        if tag in ("script", "style", "noscript", "svg"):
+            self.skip_depth += 1
+        if tag in ("p", "div", "br", "li", "tr", "h1", "h2", "h3", "h4"):
+            self.parts.append("\n")
+    def handle_endtag(self, tag):
+        if tag in ("script", "style", "noscript", "svg") and self.skip_depth:
+            self.skip_depth -= 1
+        if tag in ("p", "div", "li", "tr", "h1", "h2", "h3", "h4"):
+            self.parts.append("\n")
+    def handle_data(self, data):
+        if not self.skip_depth:
+            cleaned = data.strip()
+            if cleaned:
+                self.parts.append(cleaned + " ")
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_source_text(url: str) -> str:
+    """Fetches and extracts page text; cached for one hour."""
+    from urllib.request import Request, urlopen
+    from html import unescape
+    request = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; SOLIQ-PRO-AI/1.0)"})
+    try:
+        with urlopen(request, timeout=10) as response:
+            raw = response.read(2_500_000)
+            charset = response.headers.get_content_charset() or "utf-8"
+        html_text = raw.decode(charset, errors="replace")
+        parser = _TextExtractor()
+        parser.feed(html_text)
+        text = unescape(" ".join(parser.parts))
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r"\n\s*\n+", "\n", text)
+        return text[:180_000]
+    except Exception:
+        return ""
+
+def retrieve_source_context(question: str, max_chars: int = 14000) -> tuple[str, list[str]]:
+    """Gets the most relevant paragraphs from the configured LexUZ pages."""
+    terms = {w for w in re.findall(r"[a-zA-Zа-яА-ЯўқғҳЎҚҒҲ‘’'-]{3,}", question.lower())
+             if w not in {"bilan", "uchun", "qanday", "kerak", "bo‘yicha", "bo'yicha", "menga", "iltimos"}}
+    blocks = []
+    fetched = []
+    for source in OFFICIAL_SOURCES:
+        page = fetch_source_text(source["url"])
+        if not page or len(page.strip()) < 150:
+            continue
+        fetched.append(source["title"] + " — " + source["url"])
+        paragraphs = [re.sub(r"\s+", " ", p).strip() for p in re.split(r"[\n\r]+", page) if len(p.strip()) > 60]
+        if not paragraphs:
+            paragraphs = [page[i:i+900] for i in range(0, min(len(page), 10000), 900)]
+        scored = []
+        for paragraph in paragraphs:
+            low = paragraph.lower()
+            score = sum(1 for term in terms if term in low)
+            if score:
+                scored.append((score, paragraph))
+        scored.sort(key=lambda item: item[0], reverse=True)
+        chosen = [p for _, p in scored[:5]]
+        if not chosen:
+            chosen = [page[:1200]]
+        blocks.append("MANBA: " + source["title"] + "\nURL: " + source["url"] + "\n" +
+                      "\n".join(chosen)[:3500])
+    if not blocks:
+        return ("Hozircha LexUZ manbalaridan matnni avtomatik olib bo‘lmadi. "
+                "Bu sahifalar tarmoq yoki sayt cheklovi sabab o‘qilmagan bo‘lishi mumkin."), fetched
+    return "\n\n---\n\n".join(blocks)[:max_chars], fetched
+
+
 def ask_openai(messages, mode):
     if not OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY sozlanmagan")
     from openai import OpenAI
     client = OpenAI(api_key=OPENAI_API_KEY)
-    api_messages = [{"role": "system", "content": SYSTEM_PROMPT + "\n\nTanlangan ish bo‘limi: " + mode + "\n" + MODE_PROMPTS.get(mode, "")}]
-    for item in messages:
+    latest_question = next((item["content"] for item in reversed(messages) if item["role"] == "user"), "")
+    source_context, fetched_sources = retrieve_source_context(latest_question)
+    source_rules = (
+        "\\n\\nFOYDALANUVCHI TANLAGAN MANBALAR BO‘YICHA ISHLASH QOIDALARI:"
+        "\\n- Avval quyida keltirilgan LexUZ manba parchalari asosida javob bering."
+        "\\n- Manbada tasdiqlanmagan modda, band, stavka yoki muddatni manbadan olingandek ko‘rsatmang."
+        "\\n- Agar manba parchalari javobni to‘liq tasdiqlamasa, buni ochiq ayting; keyin umumiy bilimdan foydalanishingiz mumkin, lekin uni ‘AI umumiy bilimi’ deb belgilang."
+        "\\n- Qonun hujjatining amaldagi tahriri yoki sana muhim bo‘lsa, sana bo‘yicha tekshirish zarurligini eslating."
+        "\\n- Foydalanuvchi so‘ragan javobda manba nomi va havolasini ko‘rsating."
+        "\\n\\nOLINGAN MANBA MATNI:\\n" + source_context
+    )
+    api_messages = [{"role": "system", "content": SYSTEM_PROMPT + "\\n\\nTanlangan ish bo‘limi: " + mode + "\\n" + MODE_PROMPTS.get(mode, "") + source_rules}]
+    for item in messages[-16:]:
         api_messages.append({"role": item["role"], "content": item["content"]})
     response = client.responses.create(model=OPENAI_MODEL, input=api_messages)
-    return response.output_text
+    answer = response.output_text
+    if fetched_sources:
+        answer += "\\n\\n**Avtomatik o‘qilgan manbalar:**\\n" + "\\n".join("- [" + name.split(" — ")[0] + "](" + name.split(" — ", 1)[1] + ")" for name in fetched_sources)
+    else:
+        answer += "\\n\\n**Manba holati:** LexUZ sahifalaridan matnni avtomatik olishning imkoni bo‘lmadi. Yuqoridagi javob manbadan tasdiqlangan deb hisoblanmasin; zarur hujjat matnini yuklang yoki rasmiy saytda tekshiring."
+    return answer
 
 # Sidebar: navigation and official resources
 with st.sidebar:
@@ -416,6 +517,10 @@ with st.sidebar:
       </a>
     </div>
     """, unsafe_allow_html=True)
+    with st.expander("📚 AI foydalanadigan huquqiy manbalar", expanded=False):
+        st.caption("AI har bir savolda ushbu sahifalardan matn olishga urinadi. Sayt javob bermasa, bu holat javobda ko‘rsatiladi.")
+        for source in OFFICIAL_SOURCES:
+            st.markdown(f"- [{source['title']}]({source['url']})")
     st.info("Muhim: soliq stavkalari, muddatlar va qonuniy talablarni rasmiy manbadan tekshiring.")
     st.caption("Prototip soliq hisobotini avtomatik yubormaydi va soliq tizimlariga ulanmagan.")
 
